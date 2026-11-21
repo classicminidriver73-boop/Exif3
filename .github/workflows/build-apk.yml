@@ -18,11 +18,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-       - name: Usa Android SDK preinstallato
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          yes | sdkmanager --licenses || true
+             - name: Installa Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Installa SDK Android 35
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
