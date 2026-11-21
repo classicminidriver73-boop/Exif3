@@ -26,10 +26,15 @@ jobs:
           echo "Android SDK: $ANDROID_HOME"
           ls "$ANDROID_HOME"
 
-      - name: Installa SDK Android 35
+       - name: Installa SDK Android 35
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          fi
+          echo "SDK Manager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Configura Gradle
         uses: gradle/actions/setup-gradle@v4
