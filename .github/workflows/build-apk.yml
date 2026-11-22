@@ -2,69 +2,47 @@ name: Crea EditorEXIF APK
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - name: Scarica sorgenti
         uses: actions/checkout@v4
-
       - name: Installa Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Trova strumenti Android
+      - name: Configura Android SDK
         shell: bash
         run: |
           set -e
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-          MANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1 || true)"
-          if [ -z "$MANAGER" ]; then
-            echo 'Android command-line tools assenti: installazione necessaria.'
-            mkdir -p "$SDK_ROOT/cmdline-tools/latest"
-            curl -fL --retry 3 -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-            unzip -q /tmp/cmdline-tools.zip -d /tmp/android-tools
-            cp -R /tmp/android-tools/cmdline-tools/. "$SDK_ROOT/cmdline-tools/latest/"
-            MANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          find "$ANDROID_HOME" -name sdkmanager -type f || true
+          SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f | head -n 1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Android command-line tools mancanti" >&2
+            exit 1
           fi
-          echo "SDK_MANAGER=$MANAGER" >> "$GITHUB_ENV"
-          echo "$(dirname "$MANAGER")" >> "$GITHUB_PATH"
-          "$MANAGER" --version
-
-      - name: Installa Android SDK 35
-        shell: bash
-        run: |
-          set -e
-          yes | "$SDK_MANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
-          "$SDK_MANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
-
+          chmod +x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-35" "build-tools;35.0.0"
       - name: Configura Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-
       - name: Compila APK
         run: gradle --no-daemon assembleDebug
-
       - name: Prepara APK
         run: |
           mkdir -p output
-          cp app/build/outputs/apk/debug/app-debug.apk output/EditorEXIF.apk
-
-      - name: Rendi APK scaricabile
+          cp app/build/outputs/apk/debug/app-debug.apk output/EditorEXIF-v2.apk
+      - name: Scarica APK
         uses: actions/upload-artifact@v4
         with:
-          name: EditorEXIF-APK
-          path: output/EditorEXIF.apk
+          name: EditorEXIF-v2-APK
+          path: output/EditorEXIF-v2.apk
           if-no-files-found: error
